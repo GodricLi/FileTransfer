@@ -1,0 +1,183 @@
+
+
+
+
+day 96
+
+CBV与FBV
+
+restful协议
+
+     ----  一切皆是资源,操作只是请求方式
+	 
+	 ----book表增删改查
+	     /books/                 books
+		 /books/add/             addbook
+		 /books/(\d+)/change/    changebook
+		 /books/(\d+)/delete/    delbook
+		 
+    ----book表增删改查
+	     /books/     -----get            books      -----  返回当前所有数据
+		 /books/     -----post           books      -----  返回提交数据 
+		 
+		 /books/(\d+)-----get            bookdetail -----  返回当前查看的单条数据 
+		 /books/(\d+)-----put            bookdetail -----  返回更新数据 
+		 /books/(\d+)-----delete         bookdetail -----  返回空
+		 
+		 	 
+		 class  Books(View):
+		      def get(self,request):
+			      pass  # 查看所有书籍
+				  
+			  def post(self,request)：
+			      pass  # 添加书籍
+				  
+				  
+		 class  BooksDetail(View):
+		      def get(self,request,id):
+			      pass  # 查看具体书籍
+		 
+		      def put(self,request,id):
+			      pass  # 更新某本书籍
+				  
+			  def delete(self,request,id)：
+			      pass  # 删除某本书籍	  
+		 
+		 
+		 
+         		 
+
+
+
+restframework(Django)  
+
+    ----针对数据：json
+	
+	
+	(1)Django的原生request:
+
+		  浏览器   -------------  服务器
+		  
+		  "GET url?a=1&b=2 http/1.1\r\user_agent:Google\r\ncontentType:urlencoded\r\n\r\n"
+		  "POST url http/1.1\r\user_agent:Google\r\ncontentType:urlencoded\r\n\r\na=1&b=2"
+
+		  request.body: a=1&b=2
+		  request.POST:
+					   if contentType:urlencoded:
+							 a=1&b=2----->{"a":1,"b":2}
+    
+	(2)restframework 下的APIView：
+	
+	    
+	
+	
+	(3)
+	class PublishSerializers(serializers.Serializer):
+			name=serializers.CharField()
+			email=serializers.CharField()
+			
+			
+		PublishSerializers(queryset,many=true)
+		PublishSerializers(model_obj)
+		
+		
+		
+	总结：
+	    1 reuqest类----源码
+		
+		2 restframework 下的APIView--源码
+		
+		  url(r'^books/$', views.BookView.as_view(),name="books")#  View下的view
+
+		  books/一旦被访问： view(request) ------APIView: dispatch()
+		
+		3 def dispatch():
+		
+			  构建request对象
+			  self.request=Request(request)
+			  self.request._request
+			  self.request.GET  # get
+			  self.request.data # POST  PUT
+		  
+			  分发----if get请求：
+					if request.method.lower() in self.http_method_names:
+						handler = getattr(self, request.method.lower(),
+										 self.http_method_not_allowed)
+					else:
+						handler = self.http_method_not_allowed   
+
+					response = handler(request, *args, **kwargs) # self.get(request, *args, **kwargs)
+					
+					return response				
+			
+		4 序列化类
+		    # from django.core import serializers
+            # ret=serializers.serialize("json",publish_list)
+		
+		    restframework下的序列类  BookModelSerializers
+			    将queryset或者model对象序列成一json数据
+					bs=BookModelSerializers(book_list,many=True,context={'request': request})
+					bs=BookModelSerializers(book,context={'request': request})
+		   
+		        还可以做校验数据，json-------》queryset/model-->记录
+				
+					bs=BookModelSerializers(data=request.data)
+					if bs.is_valid():
+						print(bs.validated_data)
+						bs.save() # 重写create方法
+		5 操作数据：
+		
+		    以Book表为例
+			    class BookView(APIView):
+				    # 查看所有书籍
+					def get(self,request):
+						book_list=Book.objects.all()
+						bs=BookModelSerializers(book_list,many=True,context={'request': request})
+						return Response(bs.data)
+						
+					# 添加一本书籍	
+					def post(self,request):
+						# post请求的数据
+						bs=BookModelSerializers(data=request.data)
+						if bs.is_valid():
+							print(bs.validated_data)
+							bs.save()# create方法
+							return Response(bs.data)
+						else:
+							return Response(bs.errors)
+
+				class BookDetailView(APIView):
+                    # 查看一本书籍
+					def get(self,request,id):
+
+						book=Book.objects.filter(pk=id).first()
+						bs=BookModelSerializers(book,context={'request': request})
+						return Response(bs.data)
+                    # 更新一本书籍
+					def put(self,request,id):
+						book=Book.objects.filter(pk=id).first()
+						bs=BookModelSerializers(book,data=request.data)
+						if bs.is_valid():
+							bs.save()
+							return Response(bs.data)
+						else:
+							return Response(bs.errors)
+                    # 删除某一本书籍
+					def delete(self,request,id):
+						Book.objects.filter(pk=id).delete()
+
+						return Response()
+											
+restframework
+
+    1 APIView
+	2 序列组件
+	3 视图、
+	4 组件（认证权限频率）
+	5 数据解析器
+	6 分页和Response
+	
+	
+						
+	
+		
